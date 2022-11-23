@@ -9,6 +9,7 @@ import {
   Rds,
   SecurityGroups
 } from '@tinystacks/aws-cdk-constructs';
+import { Ec2Action } from 'aws-cdk-lib/aws-cloudwatch-actions';
 
 export class EksRdsStack extends cdk.Stack {
     constructor(scope: cdk.App, id: string, stackProps?: cdk.StackProps) {
@@ -52,7 +53,9 @@ export class EksRdsStack extends cdk.Stack {
         const eksConstruct = new EKS(this, constructId(id + 'eks-cluster'), {
           clusterName: id + '-eks-cluster',
           vpc: vpcConstruct.vpc,
-          internetAccess: true
+          internetAccess: true,
+          minimumCapacity: 1,
+          maximumCapacity: 2
         });
 
         // Deploy Helm Chart
@@ -72,6 +75,6 @@ export class EksRdsStack extends cdk.Stack {
                 tag: ''
             }
           }
-        })
+        });
     }
 }
