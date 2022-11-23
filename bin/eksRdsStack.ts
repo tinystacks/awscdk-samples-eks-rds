@@ -7,7 +7,8 @@ import {
   EKS,
   EksHelmChart,
   Rds,
-  SecurityGroups
+  SecurityGroups,
+  Alb
 } from '@tinystacks/aws-cdk-constructs';
 import { Ec2Action } from 'aws-cdk-lib/aws-cloudwatch-actions';
 
@@ -28,7 +29,7 @@ export class EksRdsStack extends cdk.Stack {
           { name: 'Postgres', port: ec2.Port.tcp(5432), peer: ec2.Peer.anyIpv4() },
         ]
 
-        const commonSecurityGroupStack = new SecurityGroups(this, constructId(id + 'eks-vpc'), {
+        const commonSecurityGroup = new SecurityGroups(this, constructId(id + 'eks-vpc'), {
           vpc: vpcConstruct.vpc,
           securityGroupName: 'common',
           securityGroupRulesList: sgRules
@@ -40,7 +41,7 @@ export class EksRdsStack extends cdk.Stack {
           instanceIdentifier: id + '-rds-postgres',
           vpc: vpcConstruct.vpc,
           databaseEngine: rds.DatabaseInstanceEngine.POSTGRES,
-          securityGroupsList: [commonSecurityGroupStack.securityGroup],
+          securityGroupsList: [commonSecurityGroup.securityGroup],
           instanceType: ec2.InstanceType.of(
             ec2.InstanceClass.BURSTABLE3,
             ec2.InstanceSize.MICRO,
@@ -48,6 +49,13 @@ export class EksRdsStack extends cdk.Stack {
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
         });
 
+        // const albStack = new Alb(this, id + '-eks-alb', {
+        //     applicationPort: 80,
+        //     vpc: vpcConstruct.vpc,
+        //     healthCheckPath: '/',
+        //     albSecurityGroup: commonSecurityGroup.securityGroup,
+        // });
+            // vpcSsmParamName: createVpcStack.ssmParameterName,clusterNameSsmParamName: eksStackStack.clusterNameSsmParamName })
         
         // Launch EKS cluster
         const eksConstruct = new EKS(this, constructId(id + 'eks-cluster'), {
