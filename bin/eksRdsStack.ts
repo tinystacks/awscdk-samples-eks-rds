@@ -7,14 +7,26 @@ import {
   EKS,
   EksHelmChart,
   Rds,
-  SecurityGroups,
-  Alb
+  SecurityGroups
 } from '@tinystacks/aws-cdk-constructs';
-import { Ec2Action } from 'aws-cdk-lib/aws-cloudwatch-actions';
+
+export interface EksRdsStackProps {
+  image: string;
+  eksMinimumCapacity: number;
+  eksMaximumCapacity: number;
+  helmRepository: string;
+}
 
 export class EksRdsStack extends cdk.Stack {
-    constructor(scope: cdk.App, id: string, stackProps?: cdk.StackProps) {
+    constructor(scope: cdk.App, id: string, props: EksRdsStackProps, stackProps?: cdk.StackProps) {
         super(scope, id, stackProps);
+
+       const { 
+        image, 
+        eksMinimumCapacity, 
+        eksMaximumCapacity, 
+        helmRepository
+       } = props;
         
         // Create VPC
         const vpcConstruct = new VPC(this, constructId(id + '-eks-vpc'), {
@@ -44,33 +56,25 @@ export class EksRdsStack extends cdk.Stack {
           securityGroupsList: [commonSecurityGroup.securityGroup],
           instanceType: ec2.InstanceType.of(
             ec2.InstanceClass.BURSTABLE3,
-            ec2.InstanceSize.MICRO,
+            ec2.InstanceSize.MICRO
           ),
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
         });
-
-        // const albStack = new Alb(this, id + '-eks-alb', {
-        //     applicationPort: 80,
-        //     vpc: vpcConstruct.vpc,
-        //     healthCheckPath: '/',
-        //     albSecurityGroup: commonSecurityGroup.securityGroup,
-        // });
-            // vpcSsmParamName: createVpcStack.ssmParameterName,clusterNameSsmParamName: eksStackStack.clusterNameSsmParamName })
         
         // Launch EKS cluster
         const eksConstruct = new EKS(this, constructId(id + 'eks-cluster'), {
           clusterName: id + '-eks-cluster',
           vpc: vpcConstruct.vpc,
           internetAccess: true,
-          minimumCapacity: 1,
-          maximumCapacity: 2
+          minimumCapacity: eksMinimumCapacity,
+          maximumCapacity: eksMaximumCapacity
         });
 
         // Deploy Helm Chart
         new EksHelmChart(this, constructId(id + 'helm-chart'), {
           eksCluster: eksConstruct.cluster,
-          chartName: 'hello-world',
-          repository: 'https://helm.github.io/examples',
+          chartName: id + 'helm-chart',
+          repository: helmRepository,
           values: {
             'DB_HOST': rdsConstruct.db.dbInstanceEndpointAddress,
             'DB_PORT': rdsConstruct.db.dbInstanceEndpointPort,
@@ -78,7 +82,7 @@ export class EksRdsStack extends cdk.Stack {
             'DB_NAME': rdsConstruct.dbName,
             'DB_USERNAME': rdsConstruct.dbUsername,
             image: {
-                respository: 'public.ecr.aws/tinystacks/aws-docker-templates-express:latest-x86',
+                respository: image,
                 pullPolicy: 'IfNotPresent',
                 tag: ''
             }
