@@ -158,7 +158,6 @@
             {
               "Effect": "Allow",
               "Action": [
-                "*",
                 "application-autoscaling:*",
                 "ecs:DescribeServices",
                 "ecs:UpdateService",
